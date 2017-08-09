@@ -27,6 +27,27 @@ static NSString *const ID = @"count";
 @end
 
 @implementation ViewController
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    [self.tableView registerNib:[UINib nibWithNibName:NSStringFromClass([CountDownCell class]) bundle:nil] forCellReuseIdentifier:ID];
+    self.tableView.mj_header = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(loadNewData)];
+    self.tableView.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMoreData)];
+    
+    //判断有没有缓存数据
+    self.dataSource = [self JSONSerialisationRead];
+    if (self.dataSource.count > 0)
+    {
+        [self enumerateDatasourceCountDown];
+        return;
+    }
+    [self.tableView.mj_header beginRefreshing];
+    
+
+}
+
+#pragma mark - Getters
 -(NSMutableDictionary *)countDownTimeDict
 {
     if (!_countDownTimeDict) {
@@ -54,25 +75,6 @@ static NSString *const ID = @"count";
     return _timerArr;
 }
 
-
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-    [self.tableView registerNib:[UINib nibWithNibName:NSStringFromClass([CountDownCell class]) bundle:nil] forCellReuseIdentifier:ID];
-    self.tableView.mj_header = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(loadNewData)];
-    self.tableView.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMoreData)];
-    
-    //判断有没有缓存数据
-    self.dataSource = [self JSONSerialisationRead];
-    if (self.dataSource.count > 0)
-    {
-        [self enumerateDatasourceCountDown];
-        return;
-    }
-    [self.tableView.mj_header beginRefreshing];
-    
-
-}
 
 #pragma mark - 加载数据
 -(void)loadNewData
@@ -138,8 +140,7 @@ static NSString *const ID = @"count";
 }
 
 
-
-     
+#pragma mark - TableView datasource
 -(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     return 80;
@@ -166,6 +167,8 @@ static NSString *const ID = @"count";
 
 }
 
+
+#pragma mark - DownCount
 //遍历数据源看下有没有倒计时
 -(void)enumerateDatasourceCountDown
 {
@@ -194,16 +197,20 @@ static NSString *const ID = @"count";
     NSNumber *number = self.countDownTimeDict[indexKey];
     NSInteger numberInteger =  [number integerValue];
     
+    
+    //如果在倒计时的字典中取不到 value 说明还没有添加定时器
     if (numberInteger <= 0)
     {
-        
-        NSLog(@"第%ld行已经添加了定时器",indexInteger);
         //添加定时器
         NSTimer *timer  =  [NSTimer timerWithTimeInterval:1.0 target:self selector:@selector(numberCutDown:) userInfo:dict repeats:YES];
         [self.timerArr addObject:timer];
         [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSRunLoopCommonModes];
+        
+        NSLog(@"第%ld行已经添加了定时器",indexInteger);
     }
     [self.countDownTimeDict addEntriesFromDictionary:dict];
+    
+//    NSLog(@"%@",self.countDownTimeDict);
 }
 
 -(void)numberCutDown:(NSTimer *)timer
@@ -229,7 +236,7 @@ static NSString *const ID = @"count";
 
 
 
-
+#pragma mark - save
 //json存储
 -(void)JSONSerialisationSaveWithArr:(NSArray *)array
 {
